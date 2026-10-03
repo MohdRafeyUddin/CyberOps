@@ -1,7 +1,9 @@
 import os
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from datetime import datetime, timezone, timedelta
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -13,100 +15,60 @@ if _ROOT_ENV.exists():
 else:
     load_dotenv()
 
+DEVICE_OFFLINE_TIMEOUT = int(os.getenv("DEVICE_OFFLINE_TIMEOUT", "30"))
+DEVICE_SCAN_INTERVAL = int(os.getenv("DEVICE_SCAN_INTERVAL", "10"))
 
 from .database import engine, Base, SessionLocal
-from .models import Asset, Event
-from .routes import dashboard, events, scanner, assets, system
+from .models import Device, DeviceHistory, CollectorStatus, NetworkEvent, NetworkSettings, Asset, Event
+from .websocket_manager import manager
+from .discovery import perform_lan_discovery
+from .routes import network, collector, dashboard, events, scanner, assets, system
 
 
-def seed_sample_data():
-    db = SessionLocal()
-    try:
-        # Check if assets table is empty
-        if db.query(Asset).count() == 0:
-            sample_assets = [
-                Asset(name="Production Web Portal", target="portal.cyberops.net", type="Domain", status="ONLINE"),
-                Asset(name="Edge API Gateway", target="api.cyberops.net", type="Domain", status="ONLINE"),
-                Asset(name="Primary DB Cluster", target="10.0.4.12", type="IP", status="ONLINE"),
-                Asset(name="Auth & Identity Service", target="auth.cyberops.net", type="Domain", status="ONLINE"),
-                Asset(name="Legacy Internal VPN", target="10.0.1.50", type="IP", status="WARNING"),
-                Asset(name="Staging Web App", target="stage.cyberops.net", type="Domain", status="ONLINE"),
-                Asset(name="Public DNS Resolver", target="8.8.8.8", type="IP", status="ONLINE"),
-            ]
-            db.add_all(sample_assets)
-            db.commit()
-
-        # Check if events table is empty
-        if db.query(Event).count() == 0:
-            sample_events = [
-                Event(
-                    event_type="SQL Injection Attempt",
-                    source="194.26.29.114",
-                    severity="CRITICAL",
-                    status="BLOCKED",
-                    message="Detected classic ' OR '1'='1 payload on endpoint /api/auth/login. Blocked by WAF rule #942100.",
-                ),
-                Event(
-                    event_type="SSH Brute Force Attack",
-                    source="45.155.205.233",
-                    severity="HIGH",
-                    status="MITIGATED",
-                    message="Over 240 failed root login attempts within 60 seconds. IP auto-banned via Fail2ban.",
-                ),
-                Event(
-                    event_type="Port Sweep / Reconnaissance",
-                    source="185.196.220.14",
-                    severity="MEDIUM",
-                    status="DETECTED",
-                    message="Sequential TCP SYN scanning detected across ports 21, 22, 80, 443, 3306, 8080.",
-                ),
-                Event(
-                    event_type="Unauthorized API Token Use",
-                    source="198.51.100.89",
-                    severity="HIGH",
-                    status="INVESTIGATING",
-                    message="Revoked JWT token attempted access to /api/v1/internal/admin/metrics.",
-                ),
-                Event(
-                    event_type="DNS Query Flood",
-                    source="172.67.180.20",
-                    severity="LOW",
-                    status="RESOLVED",
-                    message="Minor amplification traffic observed on edge recursive resolver.",
-                ),
-                Event(
-                    event_type="Cross-Site Scripting (XSS)",
-                    source="103.151.125.9",
-                    severity="MEDIUM",
-                    status="BLOCKED",
-                    message="Malicious script tag injected into feedback parameter. Sanitized and quarantined.",
-                ),
-                Event(
-                    event_type="Outdated TLS Protocol Handshake",
-                    source="203.0.113.15",
-                    severity="LOW",
-                    status="RESOLVED",
-                    message="Client attempted TLS 1.0 connection. Upgraded to TLS 1.3 enforced.",
-                ),
-            ]
-            db.add_all(sample_events)
-            db.commit()
-    finally:
-        db.close()
+async def periodic_lan_discovery_worker():
+    """Continuous periodic LAN discovery background worker."""
+    while True:
+        try:
+            db = SessionLocal()
+            # Run active reachability scan in worker thread to prevent blocking event loop
+            res = await asyncio.to_thread(perform_lan_discovery, db)
+            
+            # Broadcast updated presence numbers to all active dashboard websockets
+            await manager.broadcast({
+                "type": "DEVICES_UPDATED",
+                "total_devices": res["total_devices"],
+                "online_devices": res["online_devices"],
+            })
+            db.close()
+        except Exception as e:
+            print(f"[DISCOVERY] Background discovery loop error: {e}")
+        
+        await asyncio.sleep(DEVICE_SCAN_INTERVAL)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: create tables and seed demo data
+    # Startup: Create database tables
     Base.metadata.create_all(bind=engine)
-    seed_sample_data()
+    
+    # Run initial discovery on startup
+    db = SessionLocal()
+    try:
+        perform_lan_discovery(db)
+    except Exception as e:
+        print(f"[DISCOVERY] Startup discovery error: {e}")
+    finally:
+        db.close()
+
+    # Launch background periodic discovery worker
+    discovery_task = asyncio.create_task(periodic_lan_discovery_worker())
     yield
-    # Shutdown logic if any
+    discovery_task.cancel()
 
 
 app = FastAPI(
-    title="CYBEROPS API",
-    description="Security Operations Center (SOC) Intelligence API",
+    title="CYBEROPS HOME API",
+    description="Home Network Monitoring & Telemetry Engine",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -117,12 +79,9 @@ if raw_cors.strip() == "*":
     origins = ["*"]
 else:
     origins = [o.strip() for o in raw_cors.split(",") if o.strip()]
-    if "http://localhost:5173" not in origins:
-        origins.append("http://localhost:5173")
-    if "http://localhost:80" not in origins:
-        origins.append("http://localhost:80")
-    if "http://localhost" not in origins:
-        origins.append("http://localhost")
+    for local_url in ["http://localhost:5173", "http://localhost:80", "http://localhost", "http://127.0.0.1:5173"]:
+        if local_url not in origins:
+            origins.append(local_url)
 
 app.add_middleware(
     CORSMiddleware,
@@ -138,12 +97,30 @@ app.add_middleware(
 def health_check():
     return {
         "status": "online",
-        "service": "CYBEROPS Security Intelligence Backend",
-        "version": "1.0.0"
+        "service": "CYBEROPS HOME Network Monitoring API",
+        "version": "1.0.0",
+        "defcon": "NORMAL",
     }
 
 
-# Include Routers with /api prefix
+# WebSocket Endpoint for live dashboard updates
+@app.websocket("/ws/network")
+async def websocket_network_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception:
+        manager.disconnect(websocket)
+
+
+# Include CYBEROPS HOME Core Network Routers
+app.include_router(network.router, prefix="/api")
+app.include_router(collector.router, prefix="/api")
+
+# Backwards compatible endpoints
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
 app.include_router(scanner.router, prefix="/api")

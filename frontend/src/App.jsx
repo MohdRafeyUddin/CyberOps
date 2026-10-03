@@ -1,133 +1,118 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
+import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
-import Scanner from './pages/Scanner';
+import Devices from './pages/Devices';
+import Traffic from './pages/Traffic';
 import Events from './pages/Events';
-import Assets from './pages/Assets';
-import System from './pages/System';
-import Login from './pages/Login';
+import Settings from './pages/Settings';
 import api from './services/api';
 
-function AppLayout({ children, systemStatus, onLogout, isAuthenticated }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const location = useLocation();
-
-  const getPageTitle = (pathname) => {
-    switch (pathname) {
-      case '/':
-        return 'THREAT OVERVIEW';
-      case '/scanner':
-        return 'ASSET SCANNER';
-      case '/events':
-        return 'SECURITY EVENTS';
-      case '/assets':
-        return 'ASSET INVENTORY';
-      case '/system':
-        return 'SYSTEM HEALTH';
-      default:
-        return 'SECURITY INTELLIGENCE';
-    }
-  };
-
+function AppLayout({ children, networkStatus, wsConnected }) {
   return (
-    <div className="flex h-screen bg-[#080c14] text-slate-200 overflow-hidden font-sans">
-      {/* Sidebar */}
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        systemStatus={systemStatus}
-        onLogout={onLogout}
-        isAuthenticated={isAuthenticated}
-      />
+    <div className="min-h-screen bg-[#050505] text-[#F5F5F5] font-sans flex flex-col selection:bg-[#D4AF37]/20 selection:text-[#F3D77A]">
+      {/* Top Navbar */}
+      <Navbar networkStatus={networkStatus} wsConnected={wsConnected} />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden lg:pl-64">
-        <Header
-          onMenuClick={() => setSidebarOpen(true)}
-          title={getPageTitle(location.pathname)}
-        />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 cyber-grid">
-          <div className="max-w-7xl mx-auto">{children}</div>
-        </main>
-      </div>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {children}
+      </main>
+
+      {/* Clean Monitoring Footer */}
+      <footer className="border-t border-[#1C1C1C] bg-[#070707] py-4 mt-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono text-[#666666]">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#F5F5F5]">CYBEROPS HOME</span>
+            <span>&bull;</span>
+            <span>Home Network Monitoring Dashboard</span>
+          </div>
+          <div className="flex items-center gap-4 text-[11px]">
+            <span>Gateway: {networkStatus?.gateway || '192.168.1.1'}</span>
+            <span>&bull;</span>
+            <span className={networkStatus?.collector_online ? 'text-emerald-400' : 'text-zinc-500'}>
+              Collector: {networkStatus?.collector_online ? 'ACTIVE' : 'OFFLINE'}
+            </span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Demo mode starts authenticated or checks local storage
-  const [systemStatus, setSystemStatus] = useState({ api: true, database: true });
+  const [networkStatus, setNetworkStatus] = useState(null);
+  const [wsConnected, setWsConnected] = useState(false);
+  const wsRef = useRef(null);
+
+  const fetchStatus = async () => {
+    try {
+      const data = await api.getNetworkStatus();
+      setNetworkStatus(data);
+    } catch (err) {
+      console.error('Network status fetch error:', err);
+    }
+  };
 
   useEffect(() => {
-    const savedAuth = localStorage.getItem('cyberops_auth');
-    if (savedAuth) {
-      setIsAuthenticated(true);
-    }
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 5000);
 
-    const checkSystemHealth = async () => {
+    // Setup live WebSocket stream
+    const setupWebSocket = () => {
       try {
-        const res = await api.getHealth();
-        setSystemStatus({ api: res.status === 'online', database: true });
-      } catch (err) {
-        setSystemStatus({ api: false, database: false });
+        const wsUrl = api.getWebSocketUrl();
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          setWsConnected(true);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'COLLECTOR_STATUS' || msg.type === 'DEVICES_UPDATED') {
+              fetchStatus();
+            }
+          } catch (e) {}
+        };
+
+        ws.onclose = () => {
+          setWsConnected(false);
+          // Try reconnecting after 5 seconds
+          setTimeout(setupWebSocket, 5000);
+        };
+
+        ws.onerror = () => {
+          setWsConnected(false);
+          ws.close();
+        };
+      } catch (e) {
+        setWsConnected(false);
       }
     };
 
-    checkSystemHealth();
-    const interval = setInterval(checkSystemHealth, 15000);
-    return () => clearInterval(interval);
+    setupWebSocket();
+
+    return () => {
+      clearInterval(interval);
+      if (wsRef.current) wsRef.current.close();
+    };
   }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('cyberops_auth');
-    setIsAuthenticated(false);
-  };
-
-  const handleLoginSuccess = () => {
-    setIsAuthenticated(true);
-  };
 
   return (
     <Router>
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            isAuthenticated ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Login onLoginSuccess={handleLoginSuccess} />
-            )
-          }
-        />
-
-        {/* Main Application Routes */}
-        <Route
-          path="/*"
-          element={
-            isAuthenticated ? (
-              <AppLayout
-                systemStatus={systemStatus}
-                onLogout={handleLogout}
-                isAuthenticated={isAuthenticated}
-              >
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/scanner" element={<Scanner />} />
-                  <Route path="/events" element={<Events />} />
-                  <Route path="/assets" element={<Assets />} />
-                  <Route path="/system" element={<System />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </AppLayout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-      </Routes>
+      <AppLayout networkStatus={networkStatus} wsConnected={wsConnected}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/devices" element={<Devices />} />
+          <Route path="/traffic" element={<Traffic />} />
+          <Route path="/events" element={<Events />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AppLayout>
     </Router>
   );
 }

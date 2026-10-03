@@ -4,62 +4,61 @@
 
 @layer base {
   body {
-    background-color: #080c14;
-    color: #e2e8f0;
-    font-family: 'Inter', sans-serif;
+    background-color: #050505;
+    color: #F5F5F5;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow-x: hidden;
   }
 }
 
-/* Custom Cyberpunk Scrollbar */
+/* Crisp Clean Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #080c14;
+  background: #050505;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1f2e4d;
+  background: #222222;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #10b981;
+  background: #333333;
 }
 
-/* Cyber Matrix Background Grid */
-.cyber-grid {
-  background-size: 30px 30px;
-  background-image: 
-    linear-gradient(to right, rgba(31, 46, 77, 0.15) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(31, 46, 77, 0.15) 1px, transparent 1px);
+/* Monitoring Panel Utilities */
+.monitor-panel {
+  background-color: #0B0B0B;
+  border: 1px solid #222222;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.4);
 }
 
-.terminal-scanlines {
-  background: linear-gradient(
-    rgba(18, 16, 16, 0) 50%, 
-    rgba(0, 0, 0, 0.25) 50%
-  ), linear-gradient(
-    90deg,
-    rgba(255, 0, 0, 0.03),
-    rgba(0, 255, 0, 0.01),
-    rgba(0, 0, 255, 0.03)
-  );
-  background-size: 100% 3px, 6px 100%;
-  pointer-events: none;
+.monitor-panel:hover {
+  border-color: #2D2D2D;
 }
 
-.glow-text-green {
-  text-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+.monitor-table th {
+  background-color: #080808;
+  color: #888888;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #1C1C1C;
 }
 
-.glow-text-cyan {
-  text-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+.monitor-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #141414;
+  font-size: 0.8125rem;
 }
 
-.glow-text-red {
-  text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+.monitor-table tr:hover td {
+  background-color: #0E0E0E;
 }

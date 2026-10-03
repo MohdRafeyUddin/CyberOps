@@ -10,6 +10,9 @@ import {
   RefreshCw,
   Terminal as TerminalIcon,
   CheckCircle2,
+  Sparkles,
+  Layers,
+  Activity,
 } from 'lucide-react';
 import api from '../services/api';
 import TerminalWindow from '../components/TerminalWindow';
@@ -22,8 +25,8 @@ export default function System() {
   const [latency, setLatency] = useState(null);
   const [pinging, setPinging] = useState(false);
   const [sysLogs, setSysLogs] = useState([
-    '[*] System monitor initialized.',
-    '[*] Subsystems reporting nominal telemetry.',
+    '[*] CYBEROPS System Diagnostics daemon initialized.',
+    '[*] Health check routines active and reporting nominal telemetry.',
   ]);
 
   const fetchSystemData = async () => {
@@ -35,8 +38,8 @@ export default function System() {
       setLatency(elapsed);
       setSysInfo(data);
       setSysLogs((prev) => [
-        `[+] Heartbeat check: API [ONLINE], Database [${data.database_status}], Latency [${elapsed}ms]`,
-        `[*] Runtime: Python ${data.python_version || '3.11'} on ${data.platform || 'Linux'}`,
+        `[+] Telemetry Heartbeat: API [ONLINE], Database [${data.database_status}], Latency [${elapsed}ms]`,
+        `[*] Runtime Environment: Python ${data.python_version || '3.11'} on ${data.platform || 'Linux'}`,
         ...prev.slice(0, 15),
       ]);
     } catch (err) {
@@ -69,150 +72,163 @@ export default function System() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-mono font-extrabold text-white tracking-tight flex items-center gap-2">
-            <Cpu className="w-6 h-6 text-emerald-400" />
-            SYSTEM DIAGNOSTICS & STATUS
-          </h1>
-          <p className="text-xs font-mono text-slate-400 mt-1">
-            Infrastructure telemetry, microservice health, and configuration metadata.
-          </p>
-        </div>
+    <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Page Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-[#080808] border border-[#D4AF37]/25 p-6 sm:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.8)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0D0D0D] border border-[#D4AF37]/30 text-[11px] font-mono text-[#F3D77A]">
+              <Cpu className="w-3 h-3 text-[#D4AF37]" />
+              <span>PLATFORM DIAGNOSTICS</span>
+            </div>
+            <h1 className="text-2xl sm:text-4xl font-serif font-extrabold tracking-tight text-[#F5F1E8]">
+              SYSTEM <span className="text-gold-gradient">STATUS</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-[#A69D86] font-light">
+              Infrastructure telemetry, microservice health, and configuration metadata.
+            </p>
+          </div>
 
-        <button
-          onClick={handlePing}
-          disabled={pinging}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500/50 text-xs font-mono text-slate-200 transition-colors"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${pinging ? 'animate-spin text-emerald-400' : ''}`} />
-          EXECUTE HEARTBEAT PING
-        </button>
+          <button
+            onClick={handlePing}
+            disabled={pinging}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0D0D0D] border border-[#D4AF37]/30 hover:border-[#D4AF37] hover:bg-[#141414] text-xs font-mono font-bold text-[#F5F1E8] transition-all duration-200"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-[#D4AF37] ${pinging ? 'animate-spin' : ''}`} />
+            <span>EXECUTE HEARTBEAT PING</span>
+          </button>
+        </div>
       </div>
 
       {error && <ConnectionBanner onRetry={fetchSystemData} />}
 
-      {/* Grid of System Badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Grid of Microservice Status Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        
         {/* API Backend Card */}
-        <div className="bg-[#0e1626]/90 backdrop-blur-md rounded-xl p-5 border border-emerald-500/30 shadow-glow-green">
+        <div className="bg-[#080808] rounded-xl p-6 border border-[#D4AF37]/25 hover:border-[#D4AF37]/50 transition-all duration-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-slate-300 font-mono text-xs uppercase font-semibold">
-              <Server className="w-4 h-4 text-emerald-400" />
-              API Server
+            <div className="flex items-center gap-2.5 text-[#F5F1E8] font-mono text-xs uppercase font-bold tracking-wider">
+              <Server className="w-4 h-4 text-[#D4AF37]" />
+              <span>API SERVER</span>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/50">
+            <span className="px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-[#0E1A0A] text-[#93E993] border border-[#4ADE80]/40">
               {sysInfo?.api_status || (error ? 'OFFLINE' : 'ONLINE')}
             </span>
           </div>
-          <div className="mt-4 space-y-1 font-mono text-xs">
-            <div className="text-slate-400 flex justify-between">
+
+          <div className="mt-5 space-y-2 font-mono text-xs pt-4 border-t border-[#D4AF37]/15">
+            <div className="text-[#A69D86] flex justify-between">
               <span>Framework:</span>
-              <span className="text-slate-200">FastAPI + Uvicorn</span>
+              <span className="text-[#F5F1E8] font-semibold">FastAPI + Uvicorn</span>
             </div>
-            <div className="text-slate-400 flex justify-between">
+            <div className="text-[#A69D86] flex justify-between">
               <span>Port:</span>
-              <span className="text-slate-200">8000</span>
+              <span className="text-[#F5F1E8]">8000</span>
             </div>
-            <div className="text-slate-400 flex justify-between">
-              <span>Latency:</span>
-              <span className="text-emerald-400 font-bold">{latency !== null ? `${latency} ms` : '--'}</span>
+            <div className="text-[#A69D86] flex justify-between">
+              <span>Response Latency:</span>
+              <span className="text-[#F3D77A] font-bold">{latency !== null ? `${latency} ms` : '--'}</span>
             </div>
           </div>
         </div>
 
         {/* Database Card */}
-        <div className="bg-[#0e1626]/90 backdrop-blur-md rounded-xl p-5 border border-cyan-500/30 shadow-glow-cyan">
+        <div className="bg-[#080808] rounded-xl p-6 border border-[#D4AF37]/25 hover:border-[#D4AF37]/50 transition-all duration-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-slate-300 font-mono text-xs uppercase font-semibold">
-              <Database className="w-4 h-4 text-cyan-400" />
-              Database Engine
+            <div className="flex items-center gap-2.5 text-[#F5F1E8] font-mono text-xs uppercase font-bold tracking-wider">
+              <Database className="w-4 h-4 text-[#D4AF37]" />
+              <span>DATABASE ENGINE</span>
             </div>
             <span
-              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+              className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold border ${
                 sysInfo?.database_status === 'ONLINE'
-                  ? 'bg-cyan-950 text-cyan-400 border-cyan-500/50'
-                  : 'bg-red-950 text-red-400 border-red-500/50'
+                  ? 'bg-[#0E1A0A] text-[#93E993] border-[#4ADE80]/40'
+                  : 'bg-[#1C0505] text-[#FF6B6B] border-[#FF3333]/50'
               }`}
             >
               {sysInfo?.database_status || 'OFFLINE'}
             </span>
           </div>
-          <div className="mt-4 space-y-1 font-mono text-xs">
-            <div className="text-slate-400 flex justify-between">
-              <span>Engine:</span>
-              <span className="text-slate-200">SQLite / SQLAlchemy</span>
+
+          <div className="mt-5 space-y-2 font-mono text-xs pt-4 border-t border-[#D4AF37]/15">
+            <div className="text-[#A69D86] flex justify-between">
+              <span>Storage Driver:</span>
+              <span className="text-[#F5F1E8] font-semibold">SQLite / SQLAlchemy</span>
             </div>
-            <div className="text-slate-400 flex justify-between">
-              <span>Mode:</span>
-              <span className="text-slate-200">Persistent Disk</span>
+            <div className="text-[#A69D86] flex justify-between">
+              <span>Persistence:</span>
+              <span className="text-[#F5F1E8]">Encrypted Disk Pool</span>
             </div>
-            <div className="text-slate-400 flex justify-between">
-              <span>Connection:</span>
-              <span className="text-cyan-400 font-bold">Active Pool</span>
+            <div className="text-[#A69D86] flex justify-between">
+              <span>Telemetry State:</span>
+              <span className="text-[#D4AF37] font-bold">Active Stream</span>
             </div>
           </div>
         </div>
 
         {/* Frontend Web Card */}
-        <div className="bg-[#0e1626]/90 backdrop-blur-md rounded-xl p-5 border border-purple-500/30 shadow-lg">
+        <div className="bg-[#080808] rounded-xl p-6 border border-[#D4AF37]/25 hover:border-[#D4AF37]/50 transition-all duration-300 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-slate-300 font-mono text-xs uppercase font-semibold">
-              <Globe className="w-4 h-4 text-purple-400" />
-              Frontend UI
+            <div className="flex items-center gap-2.5 text-[#F5F1E8] font-mono text-xs uppercase font-bold tracking-wider">
+              <Globe className="w-4 h-4 text-[#D4AF37]" />
+              <span>FRONTEND UI</span>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-950 text-purple-300 border border-purple-500/50">
+            <span className="px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-[#0E1A0A] text-[#93E993] border border-[#4ADE80]/40">
               ONLINE
             </span>
           </div>
-          <div className="mt-4 space-y-1 font-mono text-xs">
-            <div className="text-slate-400 flex justify-between">
-              <span>Runtime:</span>
-              <span className="text-slate-200">React + Vite + Nginx</span>
+
+          <div className="mt-5 space-y-2 font-mono text-xs pt-4 border-t border-[#D4AF37]/15">
+            <div className="text-[#A69D86] flex justify-between">
+              <span>Architecture:</span>
+              <span className="text-[#F5F1E8] font-semibold">React + Vite + Tailwind</span>
             </div>
-            <div className="text-slate-400 flex justify-between">
+            <div className="text-[#A69D86] flex justify-between">
               <span>Client Host:</span>
-              <span className="text-slate-200">{window.location.host}</span>
+              <span className="text-[#F5F1E8] truncate max-w-[140px]">{window.location.host}</span>
             </div>
-            <div className="text-slate-400 flex justify-between">
-              <span>Styling:</span>
-              <span className="text-purple-300 font-bold">Tailwind SOC Theme</span>
+            <div className="text-[#A69D86] flex justify-between">
+              <span>Visual Theme:</span>
+              <span className="text-[#F3D77A] font-bold">Aurum Black & Gold</span>
             </div>
           </div>
         </div>
+
       </div>
 
-      {/* Metadata Specification Table */}
-      <div className="bg-[#0e1626]/90 backdrop-blur-md rounded-xl p-5 border border-[#1f2e4d]">
-        <h3 className="font-mono font-bold text-sm text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          SYSTEM CONFIGURATION & SPECS
+      {/* Metadata Specification Grid */}
+      <div className="bg-[#080808] rounded-xl p-6 border border-[#D4AF37]/25 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)]">
+        <h3 className="font-serif font-bold text-sm text-[#F5F1E8] uppercase tracking-wider mb-5 flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-[#D4AF37]" />
+          <span>ENVIRONMENT & METRICS SPECIFICATION</span>
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
-          <div className="p-3 bg-slate-900/60 rounded-lg border border-slate-800">
-            <div className="text-slate-500 text-[11px]">API VERSION</div>
-            <div className="text-white font-bold text-sm mt-0.5">
+          <div className="p-4 bg-[#020202] rounded-xl border border-[#D4AF37]/20">
+            <div className="text-[#A69D86] text-[11px] uppercase tracking-wider">API VERSION</div>
+            <div className="text-[#F5F1E8] font-bold text-base mt-1">
               {sysInfo?.api_version || 'v1.0.0'}
             </div>
           </div>
-          <div className="p-3 bg-slate-900/60 rounded-lg border border-slate-800">
-            <div className="text-slate-500 text-[11px]">APP VERSION</div>
-            <div className="text-white font-bold text-sm mt-0.5">
+
+          <div className="p-4 bg-[#020202] rounded-xl border border-[#D4AF37]/20">
+            <div className="text-[#A69D86] text-[11px] uppercase tracking-wider">APP VERSION</div>
+            <div className="text-[#F5F1E8] font-bold text-base mt-1">
               {sysInfo?.app_version || '1.0.0'}
             </div>
           </div>
-          <div className="p-3 bg-slate-900/60 rounded-lg border border-slate-800">
-            <div className="text-slate-500 text-[11px]">ENVIRONMENT</div>
-            <div className="text-emerald-400 font-bold text-sm mt-0.5 uppercase">
+
+          <div className="p-4 bg-[#020202] rounded-xl border border-[#D4AF37]/20">
+            <div className="text-[#A69D86] text-[11px] uppercase tracking-wider">ENVIRONMENT</div>
+            <div className="text-[#F3D77A] font-bold text-base mt-1 uppercase">
               {sysInfo?.environment || 'PRODUCTION'}
             </div>
           </div>
-          <div className="p-3 bg-slate-900/60 rounded-lg border border-slate-800">
-            <div className="text-slate-500 text-[11px]">SYSTEM UPTIME</div>
-            <div className="text-cyan-400 font-bold text-sm mt-0.5">
+
+          <div className="p-4 bg-[#020202] rounded-xl border border-[#D4AF37]/20">
+            <div className="text-[#A69D86] text-[11px] uppercase tracking-wider">SYSTEM UPTIME</div>
+            <div className="text-[#D4AF37] font-bold text-base mt-1">
               {formatUptime(sysInfo?.uptime_seconds)}
             </div>
           </div>
@@ -222,11 +238,11 @@ export default function System() {
       {/* Live Diagnostic Logs Terminal */}
       <div>
         <TerminalWindow
-          title="CYBEROPS SYSTEM MONITOR CONSOLE"
+          title="CYBEROPS / SYSTEM DIAGNOSTICS"
           command="cyberops sysinfo --verbose"
           logs={sysLogs}
           isLoading={pinging}
-          onClear={() => setSysLogs(['[*] Console cleared.'])}
+          onClear={() => setSysLogs(['[*] Diagnostics console buffer reset.'])}
         />
       </div>
     </div>

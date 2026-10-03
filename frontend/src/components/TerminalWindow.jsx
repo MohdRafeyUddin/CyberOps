@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, Copy, Check, Trash2, Maximize2, Minimize2 } from 'lucide-react';
+import { Terminal as TerminalIcon, Copy, Check, Trash2, Maximize2, Minimize2, Sparkles } from 'lucide-react';
 
 export default function TerminalWindow({
-  title = 'CYBEROPS TERMINAL',
+  title = 'CYBEROPS / ANALYSIS',
   command = 'cyberops status',
   logs = [],
   isLoading = false,
@@ -26,34 +26,31 @@ export default function TerminalWindow({
   const formatLine = (line, index) => {
     if (typeof line !== 'string') return null;
 
-    let textColor = 'text-slate-300';
-    let prefixColor = 'text-emerald-400';
+    let textColor = 'text-[#F5F1E8]';
+    let prefixColor = 'text-[#D4AF37]';
 
-    if (line.startsWith('[+]')) {
-      textColor = 'text-emerald-300';
-      prefixColor = 'text-emerald-400 font-bold';
-    } else if (line.startsWith('[-]')) {
-      textColor = 'text-slate-400';
-      prefixColor = 'text-rose-400 font-bold';
-    } else if (line.startsWith('[!]')) {
-      textColor = 'text-amber-300';
-      prefixColor = 'text-amber-400 font-bold';
+    if (line.startsWith('[+]') || line.includes('COMPLETE') || line.includes('ONLINE') || line.includes('SUCCESS')) {
+      textColor = 'text-[#F3D77A]';
+      prefixColor = 'text-[#F3D77A] font-bold';
+    } else if (line.startsWith('[-]') || line.includes('ERROR') || line.includes('FAIL')) {
+      textColor = 'text-[#FF8080]';
+      prefixColor = 'text-[#FF4D4D] font-bold';
+    } else if (line.startsWith('[!]') || line.includes('WARNING')) {
+      textColor = 'text-[#FAD02C]';
+      prefixColor = 'text-[#D4AF37] font-bold';
     } else if (line.startsWith('[*]')) {
-      textColor = 'text-cyan-300';
-      prefixColor = 'text-cyan-400 font-bold';
-    } else if (line.startsWith('[i]')) {
-      textColor = 'text-blue-300';
-      prefixColor = 'text-blue-400 font-bold';
+      textColor = 'text-[#E8DFC8]';
+      prefixColor = 'text-[#D4AF37] font-semibold';
     } else if (line.startsWith('$')) {
-      textColor = 'text-white font-semibold';
+      textColor = 'text-[#F5F1E8] font-bold';
     }
 
     return (
-      <div key={index} className="flex items-start gap-2 leading-relaxed break-all">
-        <span className="text-slate-600 select-none text-[11px] w-6 text-right shrink-0">
+      <div key={index} className="flex items-start gap-2.5 leading-relaxed break-all font-mono">
+        <span className="text-[#8F6F1B]/70 select-none text-[11px] w-6 text-right shrink-0">
           {(index + 1).toString().padStart(2, '0')}
         </span>
-        <span className={`${textColor} font-mono text-xs sm:text-sm`}>
+        <span className={`${textColor} text-xs sm:text-sm tracking-wide`}>
           {line}
         </span>
       </div>
@@ -62,34 +59,34 @@ export default function TerminalWindow({
 
   return (
     <div
-      className={`relative flex flex-col rounded-xl overflow-hidden border border-emerald-500/30 bg-[#060910] shadow-2xl transition-all duration-300 ${
+      className={`relative flex flex-col rounded-xl overflow-hidden border border-[#D4AF37]/30 bg-[#000000] shadow-[0_10px_30px_-5px_rgba(0,0,0,0.8)] transition-all duration-300 ${
         isExpanded ? 'fixed inset-4 z-50 h-auto' : 'h-[380px] sm:h-[440px]'
       }`}
     >
       {/* Top Header Bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-[#0b101c] border-b border-emerald-500/20 select-none">
-        <div className="flex items-center gap-2">
-          {/* Mac-style colored dots */}
-          <div className="flex items-center gap-1.5 mr-2">
-            <span className="w-3 h-3 rounded-full bg-rose-500/80 border border-rose-400 inline-block"></span>
-            <span className="w-3 h-3 rounded-full bg-amber-500/80 border border-amber-400 inline-block"></span>
-            <span className="w-3 h-3 rounded-full bg-emerald-500/80 border border-emerald-400 inline-block"></span>
+      <div className="flex items-center justify-between px-4 py-2.5 bg-[#080808] border-b border-[#D4AF37]/25 select-none">
+        <div className="flex items-center gap-3">
+          {/* Subtle gold / dark metallic dots */}
+          <div className="flex items-center gap-1.5 mr-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#333333] border border-[#555555] inline-block"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#8F6F1B]/80 border border-[#D4AF37]/40 inline-block"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#D4AF37] border border-[#F3D77A] inline-block shadow-glow-gold-sm"></span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs font-mono font-semibold text-emerald-400">
-            <TerminalIcon className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">┌──[</span>
-            <span>{title}</span>
-            <span className="hidden sm:inline">]─</span>
+
+          <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#F3D77A] tracking-wider">
+            <TerminalIcon className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <span className="text-[#A69D86]">CYBEROPS /</span>
+            <span className="text-[#F5F1E8]">{title.replace('CYBEROPS /', '').replace('CYBEROPS //', '').trim() || 'ANALYSIS'}</span>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {onClear && (
             <button
               onClick={onClear}
-              title="Clear Terminal"
-              className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+              title="Clear Terminal Buffer"
+              className="p-1.5 rounded-md text-[#A69D86] hover:text-[#F5F1E8] hover:bg-[#141414] transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -97,14 +94,14 @@ export default function TerminalWindow({
           <button
             onClick={copyToClipboard}
             title="Copy Output"
-            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1 text-xs font-mono"
+            className="p-1.5 rounded-md text-[#A69D86] hover:text-[#F3D77A] hover:bg-[#141414] transition-colors flex items-center gap-1 text-xs font-mono"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-[#F3D77A]" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             title={isExpanded ? 'Collapse' : 'Expand'}
-            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+            className="p-1.5 rounded-md text-[#A69D86] hover:text-[#F5F1E8] hover:bg-[#141414] transition-colors"
           >
             {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
@@ -112,15 +109,12 @@ export default function TerminalWindow({
       </div>
 
       {/* Terminal Body */}
-      <div className="relative flex-1 p-4 overflow-y-auto font-mono text-xs sm:text-sm space-y-1 cyber-grid bg-[#060910]/95">
-        {/* Terminal Scanline overlay */}
-        <div className="terminal-scanlines absolute inset-0 pointer-events-none opacity-40"></div>
-
+      <div className="relative flex-1 p-4 sm:p-5 overflow-y-auto font-mono text-xs sm:text-sm space-y-1.5 bg-[#000000] gold-micro-grid">
         {/* Command echo if provided */}
         {command && (
-          <div className="flex items-center gap-2 text-emerald-400 font-semibold mb-2">
-            <span className="text-emerald-500 font-bold">$</span>
-            <span className="text-slate-100">{command}</span>
+          <div className="flex items-center gap-2 text-[#F3D77A] font-semibold mb-3 bg-[#0A0A0A] p-2 rounded border border-[#D4AF37]/20">
+            <span className="text-[#D4AF37] font-bold">$</span>
+            <span className="text-[#F5F1E8]">{command}</span>
           </div>
         )}
 
@@ -129,37 +123,39 @@ export default function TerminalWindow({
 
         {/* Loading animation state */}
         {isLoading && (
-          <div className="flex items-center gap-2 py-1 text-cyan-400 animate-pulse">
-            <span className="text-slate-600 text-[11px] w-6 text-right shrink-0">..</span>
-            <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-            <span className="font-mono text-xs sm:text-sm">Executing telemetry routines...</span>
+          <div className="flex items-center gap-2 py-1.5 text-[#F3D77A]">
+            <span className="text-[#8F6F1B] text-[11px] w-6 text-right shrink-0">..</span>
+            <span className="inline-block w-2 h-2 rounded-full bg-[#D4AF37] animate-ping"></span>
+            <span className="font-mono text-xs sm:text-sm text-[#F3D77A]">
+              Executing intelligence analysis pipeline...
+            </span>
           </div>
         )}
 
-        {/* Interactive / Idle prompt */}
+        {/* Blinking gold cursor */}
         {!isLoading && (
-          <div className="flex items-center gap-2 text-slate-400 pt-1">
-            <span className="text-slate-600 text-[11px] w-6 text-right shrink-0">..</span>
-            <span className="text-emerald-400 font-bold">$</span>
-            <span className="w-2 h-4 bg-emerald-400 animate-pulse inline-block"></span>
+          <div className="flex items-center gap-2 text-[#A69D86] pt-1">
+            <span className="text-[#8F6F1B]/60 text-[11px] w-6 text-right shrink-0">..</span>
+            <span className="text-[#D4AF37] font-bold">$</span>
+            <span className="terminal-cursor"></span>
           </div>
         )}
 
         <div ref={terminalEndRef} />
       </div>
 
-      {/* Bottom Terminal Footer status */}
-      <div className="px-4 py-1.5 bg-[#080d17] border-t border-emerald-500/10 flex items-center justify-between text-[10px] font-mono text-slate-500">
+      {/* Bottom Terminal Status Bar */}
+      <div className="px-4 py-1.5 bg-[#060606] border-t border-[#D4AF37]/20 flex items-center justify-between text-[10px] font-mono text-[#A69D86]">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            <span className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-cyan-400 animate-ping' : 'bg-emerald-400'}`}></span>
-            {isLoading ? 'SCANNING' : 'READY'}
+          <span className="flex items-center gap-1.5 text-[#F5F1E8]">
+            <span className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-[#F3D77A] animate-ping' : 'bg-[#D4AF37]'}`}></span>
+            {isLoading ? 'ANALYZING' : 'IDLE / READY'}
           </span>
-          <span>UTF-8</span>
-          <span>LINUX x86_64</span>
+          <span className="hidden sm:inline">UTF-8</span>
+          <span className="hidden sm:inline">SEC-LEVEL: HIGH</span>
         </div>
-        <div>
-          <span>CYBEROPS-AGENT // SOC-SEC</span>
+        <div className="text-[#8F6F1B] font-semibold">
+          CYBEROPS-INTELLIGENCE // V1.0
         </div>
       </div>
     </div>

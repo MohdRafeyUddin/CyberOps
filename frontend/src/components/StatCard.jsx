@@ -1,59 +1,42 @@
 import React from 'react';
 
-export default function StatCard({ title, value, subtext, icon: Icon, color = 'emerald' }) {
-  const colorMap = {
-    emerald: {
-      border: 'border-emerald-500/20 hover:border-emerald-500/50',
-      iconBg: 'bg-emerald-500/10 text-emerald-400',
-      text: 'text-emerald-400',
-      glow: 'shadow-[0_0_15px_-3px_rgba(16,185,129,0.15)]',
-    },
-    cyan: {
-      border: 'border-cyan-500/20 hover:border-cyan-500/50',
-      iconBg: 'bg-cyan-500/10 text-cyan-400',
-      text: 'text-cyan-400',
-      glow: 'shadow-[0_0_15px_-3px_rgba(6,182,212,0.15)]',
-    },
-    amber: {
-      border: 'border-amber-500/20 hover:border-amber-500/50',
-      iconBg: 'bg-amber-500/10 text-amber-400',
-      text: 'text-amber-400',
-      glow: 'shadow-[0_0_15px_-3px_rgba(245,158,11,0.15)]',
-    },
-    red: {
-      border: 'border-red-500/20 hover:border-red-500/50',
-      iconBg: 'bg-red-500/10 text-red-400',
-      text: 'text-red-400',
-      glow: 'shadow-[0_0_15px_-3px_rgba(239,68,68,0.15)]',
-    },
-  };
-
-  const scheme = colorMap[color] || colorMap.emerald;
+export default function StatCard({
+  title,
+  value,
+  subtext,
+  icon: Icon,
+  statusColor = 'text-[#F5F5F5]',
+  badge,
+}) {
+  const isAvailable = value !== undefined && value !== null && value !== '' && value !== 'Traffic data unavailable';
 
   return (
-    <div
-      className={`relative overflow-hidden bg-[#0e1626]/90 backdrop-blur-md rounded-xl p-5 border transition-all duration-300 ${scheme.border} ${scheme.glow}`}
-    >
-      {/* Subtle corner tech decoration */}
-      <div className="absolute top-0 right-0 w-8 h-8 pointer-events-none opacity-40">
-        <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-slate-400"></div>
-      </div>
+    <div className="bg-[#0B0B0B] border border-[#222222] hover:border-[#2D2D2D] rounded-xl p-5 transition-all shadow-panel">
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <p className="text-[11px] font-mono uppercase tracking-wider text-[#888888] font-medium">
+            {title}
+          </p>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-mono uppercase tracking-wider text-slate-400">{title}</p>
-          <h3 className="text-3xl font-bold font-mono text-white mt-1 tracking-tight">
-            {value !== undefined ? value : '--'}
-          </h3>
-          {subtext && (
-            <p className="text-xs text-slate-400 mt-1 flex items-center gap-1 font-mono">
-              {subtext}
-            </p>
-          )}
+          <div className="flex items-baseline gap-2">
+            <h3 className={`text-2xl sm:text-3xl font-mono font-bold tracking-tight ${statusColor}`}>
+              {isAvailable ? value : '--'}
+            </h3>
+            {badge && (
+              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-[#161616] text-[#A69D86] border border-[#262626]">
+                {badge}
+              </span>
+            )}
+          </div>
+
+          <p className="text-xs text-[#777777] font-sans pt-0.5">
+            {isAvailable ? subtext : (value === 'Traffic data unavailable' ? 'Traffic data unavailable' : 'Collector data pending')}
+          </p>
         </div>
+
         {Icon && (
-          <div className={`p-3 rounded-lg ${scheme.iconBg} border border-white/5`}>
-            <Icon className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-lg bg-[#141414] border border-[#222222] flex items-center justify-center text-[#A69D86] shrink-0">
+            <Icon className="w-5 h-5 text-[#D4AF37]" />
           </div>
         )}
       </div>

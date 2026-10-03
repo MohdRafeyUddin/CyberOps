@@ -2,7 +2,6 @@ import axios from 'axios';
 
 // Get API base URL from environment or fallback
 const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-// Remove trailing slash if present
 const BASE_URL = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
 
 export const apiClient = axios.create({
@@ -20,57 +19,81 @@ export const api = {
     return res.data;
   },
 
-  // Dashboard Stats
-  getDashboard: async () => {
-    const res = await apiClient.get('/api/dashboard');
+  // Network Status
+  getNetworkStatus: async () => {
+    const res = await apiClient.get('/api/network/status');
     return res.data;
   },
 
-  // Events
-  getEvents: async (params = {}) => {
-    const res = await apiClient.get('/api/events', { params });
+  // Devices
+  getDevices: async (params = {}) => {
+    const res = await apiClient.get('/api/network/devices', { params });
+    // Normalize response: returns { total_devices, online_devices, devices }
+    const data = res.data;
+    if (Array.isArray(data)) {
+      const online = data.filter((d) => d.status === 'ONLINE').length;
+      return {
+        total_devices: data.length,
+        online_devices: online,
+        devices: data,
+      };
+    }
+    return {
+      total_devices: data.total_devices || (data.devices ? data.devices.length : 0),
+      online_devices: data.online_devices !== undefined ? data.online_devices : 0,
+      devices: data.devices || [],
+    };
+  },
+
+  getDeviceDetails: async (deviceId) => {
+    const res = await apiClient.get(`/api/network/devices/${deviceId}`);
     return res.data;
   },
 
-  createEvent: async (eventData) => {
-    const res = await apiClient.post('/api/events', eventData);
+  updateDevice: async (deviceId, data) => {
+    const res = await apiClient.put(`/api/network/devices/${deviceId}`, data);
     return res.data;
   },
 
-  deleteEvent: async (eventId) => {
-    const res = await apiClient.delete(`/api/events/${eventId}`);
+  deleteDevice: async (deviceId) => {
+    const res = await apiClient.delete(`/api/network/devices/${deviceId}`);
     return res.data;
   },
 
-  // Scanner
-  runScan: async (target, scanType = 'http') => {
-    const res = await apiClient.post('/api/scanner/scan', {
-      target,
-      scan_type: scanType,
-    });
+  // Traffic
+  getTraffic: async (range = '1h') => {
+    const res = await apiClient.get('/api/network/traffic', { params: { range } });
     return res.data;
   },
 
-  // Assets
-  getAssets: async () => {
-    const res = await apiClient.get('/api/assets');
+  // Network Events
+  getNetworkEvents: async (params = {}) => {
+    const res = await apiClient.get('/api/network/events', { params });
     return res.data;
   },
 
-  addAsset: async (assetData) => {
-    const res = await apiClient.post('/api/assets', assetData);
+  // Topology Map
+  getTopology: async () => {
+    const res = await apiClient.get('/api/network/topology');
     return res.data;
   },
 
-  deleteAsset: async (assetId) => {
-    const res = await apiClient.delete(`/api/assets/${assetId}`);
+  // Settings
+  getSettings: async () => {
+    const res = await apiClient.get('/api/network/settings');
     return res.data;
   },
 
-  // System
-  getSystemInfo: async () => {
-    const res = await apiClient.get('/api/system');
+  saveSettings: async (settingsData) => {
+    const res = await apiClient.post('/api/network/settings', settingsData);
     return res.data;
+  },
+
+  // WebSocket URL Generator
+  getWebSocketUrl: () => {
+    const wsProtocol = BASE_URL.startsWith('https') ? 'wss:' : 'ws:';
+    const host = BASE_URL.replace(/^https?:\/\//, '');
+    return `${wsProtocol}//${host}/ws/network`;
   },
 };
 

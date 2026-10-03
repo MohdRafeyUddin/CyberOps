@@ -1,14 +1,176 @@
-from datetime import datetime
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from datetime import datetime, timezone
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field, field_serializer
 
 
-# Asset Schemas
+class DeviceBase(BaseModel):
+    ip: str
+    mac: Optional[str] = None
+    hostname: Optional[str] = None
+    vendor: Optional[str] = "Unknown Vendor"
+    device_type: Optional[str] = "Network Client"
+    status: Optional[str] = "ONLINE"
+    is_reachable: Optional[bool] = True
+    is_gateway: Optional[bool] = False
+    interface: Optional[str] = "Wi-Fi / Ethernet"
+
+
+class DeviceCreate(DeviceBase):
+    pass
+
+
+class DeviceUpdate(BaseModel):
+    custom_name: Optional[str] = None
+    device_type: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class DeviceResponse(BaseModel):
+    id: int
+    ip: str
+    ip_address: Optional[str] = None
+    mac: Optional[str] = None
+    mac_address: Optional[str] = None
+    hostname: Optional[str] = None
+    vendor: Optional[str] = "Unknown Vendor"
+    device_type: Optional[str] = "Network Client"
+    status: str = "ONLINE"  # ONLINE, OFFLINE
+    is_reachable: bool = True
+    is_gateway: bool = False
+    interface: Optional[str] = "Wi-Fi / Ethernet"
+    download_bytes: float = 0.0
+    upload_bytes: float = 0.0
+    custom_name: Optional[str] = None
+    notes: Optional[str] = None
+    first_seen: datetime
+    last_seen: datetime
+
+    @field_serializer("first_seen", "last_seen", check_fields=False)
+    def serialize_dt(self, dt: datetime, _info):
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
+
+    class Config:
+        from_attributes = True
+
+
+class DeviceListResponse(BaseModel):
+    total_devices: int
+    online_devices: int
+    devices: List[DeviceResponse]
+
+
+class DeviceDetailResponse(DeviceResponse):
+    history: List[Dict[str, Any]] = []
+    events: List[Dict[str, Any]] = []
+
+
+class TrafficSampleCreate(BaseModel):
+    bytes_sent: float = 0.0
+    bytes_recv: float = 0.0
+    bytes_sent_rate: float = 0.0
+    bytes_recv_rate: float = 0.0
+    packets_sent: Optional[int] = 0
+    packets_recv: Optional[int] = 0
+    interface: Optional[str] = "Wi-Fi / Ethernet"
+
+
+class TrafficSampleResponse(TrafficSampleCreate):
+    id: int
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NetworkEventResponse(BaseModel):
+    id: int
+    timestamp: datetime
+    device_id: Optional[int] = None
+    device_name: Optional[str] = None
+    event_type: str
+    details: Optional[str] = None
+    severity: str = "LOW"
+
+    class Config:
+        from_attributes = True
+
+
+class NetworkStatusResponse(BaseModel):
+    network_status: str  # ONLINE, DEGRADED, OFFLINE
+    collector_online: bool
+    collector_name: Optional[str] = None
+    gateway: Optional[str] = None
+    interface: Optional[str] = None
+    total_devices: int = 0
+    connected_devices: int = 0
+    online_devices: int = 0
+    total_download_formatted: str = "0 B"
+    total_upload_formatted: str = "0 B"
+    current_download_rate: float = 0.0
+    current_upload_rate: float = 0.0
+    last_updated: Optional[datetime] = None
+    traffic_available: bool = False
+
+
+class CollectorRegisterRequest(BaseModel):
+    collector_name: str
+    ip_address: str
+    gateway: str
+    interface: str
+    platform: Optional[str] = None
+    version: Optional[str] = "1.0.0"
+
+
+class CollectorHeartbeatRequest(BaseModel):
+    collector_name: str
+    ip_address: str
+    gateway: str
+    interface: str
+    cpu_percent: Optional[float] = 0.0
+    memory_percent: Optional[float] = 0.0
+
+
+class CollectorDeviceSyncRequest(BaseModel):
+    collector_name: str
+    gateway_ip: str
+    devices: List[DeviceBase]
+
+
+class CollectorTrafficSyncRequest(BaseModel):
+    collector_name: str
+    sample: TrafficSampleCreate
+
+
+class TopologyNode(BaseModel):
+    id: str
+    label: str
+    type: str  # internet, router, device, collector
+    ip: Optional[str] = None
+    mac: Optional[str] = None
+    vendor: Optional[str] = None
+    status: str
+    is_gateway: bool = False
+
+
+class TopologyLink(BaseModel):
+    source: str
+    target: str
+    label: Optional[str] = None
+
+
+class TopologyResponse(BaseModel):
+    nodes: List[TopologyNode]
+    links: List[TopologyLink]
+
+
+# Backwards compatibility schemas
 class AssetBase(BaseModel):
-    name: str = Field(..., example="Primary API Gateway")
-    target: str = Field(..., example="api.cyberops.internal")
-    type: str = Field(default="Domain", example="Domain")
-    status: str = Field(default="ONLINE", example="ONLINE")
+    name: str
+    target: str
+    type: str = "Domain"
+    status: str = "ONLINE"
 
 
 class AssetCreate(AssetBase):
@@ -23,13 +185,16 @@ class AssetOut(AssetBase):
         from_attributes = True
 
 
-# Event Schemas
+class AssetResponse(AssetOut):
+    pass
+
+
 class EventBase(BaseModel):
-    event_type: str = Field(..., example="Brute Force Attempt")
-    source: str = Field(..., example="198.51.100.42")
-    severity: str = Field(..., example="HIGH")  # LOW, MEDIUM, HIGH, CRITICAL
-    status: str = Field(default="DETECTED", example="DETECTED")
-    message: Optional[str] = Field(default=None, example="Multiple failed SSH authentication attempts on port 22")
+    event_type: str
+    source: str
+    severity: str
+    status: str = "DETECTED"
+    message: Optional[str] = None
 
 
 class EventCreate(EventBase):
@@ -44,23 +209,10 @@ class EventOut(EventBase):
         from_attributes = True
 
 
-# Scanner Schemas
-class ScanRequest(BaseModel):
-    target: str = Field(..., example="example.com")
-    scan_type: str = Field(default="http", example="http")  # port, http, dns, all
+class EventResponse(EventOut):
+    pass
 
 
-class ScanResult(BaseModel):
-    target: str
-    scan_type: str
-    status: str
-    duration_ms: int
-    summary: dict
-    logs: List[str]
-    timestamp: datetime
-
-
-# Dashboard Schemas
 class ActivityPoint(BaseModel):
     time: str
     events_count: int
@@ -72,6 +224,25 @@ class DashboardStats(BaseModel):
     online_assets: int
     security_events: int
     critical_alerts: int
-    recent_events: List[EventOut]
     activity_chart: List[ActivityPoint]
-    system_status: str
+    recent_events: List[EventOut]
+
+
+class ScanRequest(BaseModel):
+    target: str
+    scan_type: str = "http"
+
+
+class ScanSummary(BaseModel):
+    resolved_ip: Optional[str] = None
+    http_status: Optional[int] = None
+    https_enabled: bool = False
+    open_ports: List[int] = []
+
+
+class ScanResult(BaseModel):
+    target: str
+    scan_type: str
+    duration_ms: int
+    summary: ScanSummary
+    logs: List[str]
